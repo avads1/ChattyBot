@@ -66,7 +66,7 @@ public class ChattyBotServer {
 				}
 				if (i == maxClientsCount) {
 					PrintStream os = new PrintStream(clientSocket.getOutputStream());
-					os.println("Server too busy. Try later.");
+					os.println("** Server is busy. Please try later. **");
 					os.close();
 					clientSocket.close();
 				}
@@ -82,13 +82,14 @@ public class ChattyBotServer {
 		Scanner sc;
 		do {
 			sc = new Scanner(System.in);
-			System.out.println("Enter the number of clients supported \n");
+			System.out.println(
+					"--------------------- Welcome to ChattyBot! ------------------\nEnter the number of clients supported");
 			try {
 				maxClientsCount = sc.nextInt();
 				isInputFormatWrong = false;
 			} catch (NoSuchElementException | IllegalStateException ex) {
 				isInputFormatWrong = true;
-				System.err.println("Invalid input type");
+				System.err.println("** Invalid input type. **");
 			}
 		} while (isInputFormatWrong);
 		sc.close();
@@ -154,20 +155,18 @@ class clientThread extends Thread {
 		clientThread[] threads = this.threads;
 
 		try {
-			/*
-			 * Create input and output streams for this client.
-			 */
+			// Create input and output streams for this client.
 			is = new DataInputStream(clientSocket.getInputStream());
 			os = new PrintStream(clientSocket.getOutputStream());
-			String name;
+			String userName;
 			while (true) {
 				os.println("Enter your name.");
-				name = is.readLine().trim();
-				if (name.indexOf('@') == -1) {
-					appUserList.add(name);
+				userName = is.readLine().trim();
+				if (userName.indexOf('@') == -1) {
+					appUserList.add(userName);
 					break;
 				} else {
-					os.println("The name should not contain '@' character.");
+					os.println("** The name should not contain '@' character **.");
 				}
 			}
 
@@ -175,161 +174,179 @@ class clientThread extends Thread {
 				os.println(">>");
 				String command = is.readLine().trim();
 				if (command.startsWith(ChattyBotConstants.LIST_CHATROOMS_COMMAND)) {
-					if (appChatRoomList.size() < 1) {
-						os.println("There are no chatrooms created.");
-					} else {
-						for (int i = 0; i < appChatRoomList.size(); i++) {
-							os.println(i + 1 + ") " + appChatRoomList.get(i));
-						}
-					}
+					listChatrooms();
 				} else if (command.startsWith(ChattyBotConstants.CREATE_CHATROOM_COMMAND)) {
-					int startIndex = command.length() - ChattyBotConstants.CREATE_CHATROOM_COMMAND.length();
-					String chatRoomName = command.substring(command.length() - startIndex).trim();
-					if (chatRoomName.equals("") || chatRoomName.isEmpty()) {
-						os.println("Chatroom name cannot be blank. Please enter valid name.");
-					} else {
-						appChatRoomList.add(chatRoomName);
-						os.println(chatRoomName + " chatroom has been created");
-					}
+					createChatroom(command);
 				} else if (command.startsWith(ChattyBotConstants.JOIN_CHATROOM_COMMAND)) {
-					int startIndex = command.length() - ChattyBotConstants.JOIN_CHATROOM_COMMAND.length();
-					String chatRoomName = command.substring(command.length() - startIndex).trim();
-					if (appChatRoomList.contains(chatRoomName)) {
-						List<String> usersList = null;
-						if (this.chatRoom == null) {
-							this.chatRoom = new HashMap<String, List<String>>();
-							usersList = new ArrayList<String>();
-							usersList.add(name);
-							this.chatRoom.put(chatRoomName, usersList);
-						}
-
-						// os.println("Users list " +
-						// System.identityHashCode(usersList));
-						// Setting the name of current client thread.
-						this.setName(name);
-						/* Welcome the new the client. */
-						os.println("===============================================================\nWelcome " + name
-								+ " to chat room " + chatRoomName
-								+ "\nTo exit chat room enter \"leave\" in a new line.");
-						synchronized (this) {
-							for (int i = 0; i < maxClientsCount; i++) {
-								if (threads[i] != null && threads[i] == this) {
-									clientName = "@" + name;
-									break;
-								}
-							}
-							// Public chat box
-							// for (int i = 0; i < maxClientsCount; i++) {
-							// if (threads[i] != null && threads[i] != this &&
-							// threads[i].chatRoom != null) {
-							// if
-							// (usersList.contains(threads[i].chatRoom.get(chatRoomName).get(0)))
-							// threads[i].os
-							// .println("*** A new user " + name + " entered the
-							// chat room !!! ***");
-							// }
-							// }
-						}
-
-						/* Start the conversation. */
-						while (true) {
-							os.println("->");
-							String userInput = is.readLine();
-							if (userInput.startsWith(ChattyBotConstants.LIST_USERS)) {
-								for (int i = 0; i < maxClientsCount; i++) {
-									if (threads[i] != null && threads[i].chatRoom != null
-											&& threads[i].chatRoom.containsKey(chatRoomName)) {
-										List<String> chatRoomUserList = threads[i].chatRoom.get(chatRoomName);
-										for (int j = 0; j < chatRoomUserList.size(); j++)
-											os.println(chatRoomUserList.get(j));
-									}
-								}
-							} else if (userInput.startsWith(ChattyBotConstants.ADD_USER)) {
-								startIndex = userInput.length() - ChattyBotConstants.ADD_USER.length();
-								String userName = userInput.substring(userInput.length() - startIndex).trim();
-								if (appUserList.contains(userName)) {
-									usersList.add(userName);
-									this.chatRoom.put(chatRoomName, usersList);
-								} else {
-									os.println("User does not exist in ChattyBot");
-								}
-							} else if (userInput.equalsIgnoreCase(ChattyBotConstants.LEAVE_COMMAND)) {
-								usersList.remove(name);
-								synchronized (this) {
-									// Public chat box
-									for (int i = 0; i < maxClientsCount; i++) {
-										// threads[i] != null && threads[i] !=
-										// this means that thread shouldnt be
-										// null and
-										// broadcast message to every client
-										// except the current client that has
-										// sent a cmd/request
-										if (threads[i] != null && threads[i] != this) {
-											threads[i].os.println(
-													"*** The user " + name + " is leaving the chat room !!! ***\n");
-										}
-									}
-								}
-								// Own client console
-								os.println("*** Bye " + name
-										+ " ***\n===============================================================");
-								break;
-							} else {
-
-								/*
-								 * If the message is private sent it to the
-								 * given client.
-								 */
-								if (userInput.startsWith("@")) {
-									String[] words = userInput.split("\\s", 2);
-									if (words.length > 1 && words[1] != null) {
-										words[1] = words[1].trim();
-										if (!words[1].isEmpty()) {
-											synchronized (this) {
-												for (int i = 0; i < maxClientsCount; i++) {
-													if (threads[i] != null && threads[i] != this
-															&& threads[i].clientName != null
-															&& threads[i].clientName.equals(words[0])) {
-														threads[i].os.println("<" + name + "> " + words[1]);
-														/*
-														 * Echo this message to
-														 * let the client know
-														 * the private message
-														 * was sent.
-														 */
-														this.os.println(">" + name + "> " + words[1]);
-														break;
-													}
-												}
-											}
-										}
-									}
-								} else {
-									/*
-									 * The message is public, broadcast it to
-									 * all other clients.
-									 */
-									synchronized (this) {
-										for (int i = 0; i < maxClientsCount; i++) {
-											if (threads[i] != null && threads[i].clientName != null) {
-												threads[i].os.println("<" + name + "> " + userInput);
-											}
-										}
-									}
-								}
-							}
-						}
-					} else {
-						os.println("Chatroom doesnt exist.");
-					}
+					joinChatRoom(maxClientsCount, threads, userName, command);
 				} else if (command.startsWith(ChattyBotConstants.QUIT_CHATBOT)) {
-					os.println("*** Exiting ChattyBot. Come back soon, " + name + " ***");
+					os.println("=== Exiting ChattyBot. Come back soon, " + userName + " ===");
+				} else if (command.startsWith(ChattyBotConstants.HELP)) {
+					os.println(ChattyBotConstants.LIST_OF_COMMANDS_MAIN);
 				} else {
-					os.println("Invalid command. Please enter a recheck the command");
+					os.println(
+							"** Invalid command. Please recheck the command or type \"help\" for list of commands. **");
 				}
 			}
 
 		} catch (IOException e) {
+		}
+	}
+
+	private void listChatrooms() {
+		if (appChatRoomList.size() < 1) {
+			os.println("** There are no chat rooms created. **");
+		} else {
+			for (int i = 0; i < appChatRoomList.size(); i++) {
+				os.println(i + 1 + ") " + appChatRoomList.get(i));
+			}
+		}
+	}
+
+	private void createChatroom(String command) {
+		int startIndex = command.length() - ChattyBotConstants.CREATE_CHATROOM_COMMAND.length();
+		String chatRoomName = command.substring(command.length() - startIndex).trim();
+		if (chatRoomName.equals("") || chatRoomName.isEmpty()) {
+			os.println("** Chat room name cannot be blank. Please enter valid name. **");
+		} else {
+			appChatRoomList.add(chatRoomName);
+			os.println("== " + chatRoomName + " chatroom has been created. ==");
+		}
+	}
+
+	private void joinChatRoom(int maxClientsCount, clientThread[] threads, String name, String command)
+			throws IOException {
+		int startIndex = command.length() - ChattyBotConstants.JOIN_CHATROOM_COMMAND.length();
+		String chatRoomName = command.substring(command.length() - startIndex).trim();
+		if (appChatRoomList.contains(chatRoomName)) {
+			List<String> usersList = null;
+			if (this.chatRoom == null) {
+				this.chatRoom = new HashMap<String, List<String>>();
+				usersList = new ArrayList<String>();
+				usersList.add(name);
+				this.chatRoom.put(chatRoomName, usersList);
+			}
+
+			// Welcome the new the client to chatroom.
+			os.println("##################################\nWelcome \"" + name + "\" to \"" + chatRoomName
+					+ "\"###############################" + "\nTo exit chat room enter \"leave\"");
+			synchronized (this) {
+				for (int i = 0; i < maxClientsCount; i++) {
+					if (threads[i] != null && threads[i] == this) {
+						clientName = "@" + name;
+						break;
+					}
+
+				}
+				// Public chat box
+				for (int i = 0; i < maxClientsCount; i++) {
+					if (threads[i] != null && threads[i] != this && threads[i].chatRoom != null) {
+						if (threads[i].chatRoom.keySet().contains(chatRoomName))
+							// if
+							// (usersList.contains(threads[i].chatRoom.get(chatRoomName).get(0)))
+							threads[i].os.println("=== " + name + " has entered the chat room. Say hi! ===");
+					}
+				}
+			}
+
+			// Start the conversation.
+			while (true) {
+				os.println("->");
+				String userInput = is.readLine();
+				if (userInput.startsWith(ChattyBotConstants.LIST_USERS)) {
+					listUsers(maxClientsCount, threads, chatRoomName);
+				} else if (userInput.startsWith(ChattyBotConstants.ADD_USER)) {
+					addUser(chatRoomName, usersList, userInput);
+				} else if (userInput.equalsIgnoreCase(ChattyBotConstants.LEAVE_COMMAND)) {
+					usersList.remove(name);
+					synchronized (this) {
+						// Public chat box
+						for (int i = 0; i < maxClientsCount; i++) {
+							// threads[i] != null && threads[i] !=
+							// this means that thread shouldnt be
+							// null and
+							// broadcast message to every client
+							// except the current client that has
+							// sent a cmd/request
+							if (threads[i] != null && threads[i] != this) {
+								threads[i].os.println("=== The user " + name + " is leaving the chat room !!! ===\n");
+							}
+						}
+					}
+					// Own client console
+					os.println("=== Bye " + name
+							+ " ===\n#################################################################");
+					break;
+				} else if (userInput.equalsIgnoreCase(ChattyBotConstants.HELP)) {
+					os.println(ChattyBotConstants.LIST_OF_CHATROOM_COMMANDS);
+				} else {
+
+					// If the message is private sent it to the given client.
+					if (userInput.startsWith("@")) {
+						privateMessage(maxClientsCount, threads, name, userInput);
+					} else {
+						broadcastMessage(maxClientsCount, threads, name, userInput);
+					}
+				}
+			}
+		} else {
+			os.println("** Chatroom doesnt exist. **");
+		}
+	}
+
+	private void privateMessage(int maxClientsCount, clientThread[] threads, String name, String userInput) {
+		String[] words = userInput.split("\\s", 2);
+		if (words.length > 1 && words[1] != null) {
+			words[1] = words[1].trim();
+			if (!words[1].isEmpty()) {
+				synchronized (this) {
+					for (int i = 0; i < maxClientsCount; i++) {
+						if (threads[i] != null && threads[i] != this && threads[i].clientName != null
+								&& threads[i].clientName.equals(words[0])) {
+							threads[i].os.println("<" + name + "> " + words[1]);
+							/*
+							 * Echo this message to let the client know the
+							 * private message was sent.
+							 */
+							this.os.println(">" + name + "> " + words[1]);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private void broadcastMessage(int maxClientsCount, clientThread[] threads, String name, String userInput) {
+		// The message is public, broadcast it to all other clients.
+		synchronized (this) {
+			for (int i = 0; i < maxClientsCount; i++) {
+				if (threads[i] != null && threads[i].clientName != null) {
+					threads[i].os.println("<" + name + "> " + userInput);
+				}
+			}
+		}
+	}
+
+	private void addUser(String chatRoomName, List<String> usersList, String userInput) {
+		int startIndex;
+		startIndex = userInput.length() - ChattyBotConstants.ADD_USER.length();
+		String userName = userInput.substring(userInput.length() - startIndex).trim();
+		if (appUserList.contains(userName)) {
+			usersList.add(userName);
+			this.chatRoom.put(chatRoomName, usersList);
+		} else {
+			os.println("** User does not exist in ChattyBot. **");
+		}
+	}
+
+	private void listUsers(int maxClientsCount, clientThread[] threads, String chatRoomName) {
+		for (int i = 0; i < maxClientsCount; i++) {
+			if (threads[i] != null && threads[i].chatRoom != null && threads[i].chatRoom.containsKey(chatRoomName)) {
+				List<String> chatRoomUserList = threads[i].chatRoom.get(chatRoomName);
+				for (int j = 0; j < chatRoomUserList.size(); j++)
+					os.println(chatRoomUserList.get(j));
+			}
 		}
 	}
 }
