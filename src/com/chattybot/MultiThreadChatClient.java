@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 /*
  * The code below is the multi-threaded chat client. 
@@ -80,11 +82,53 @@ public class MultiThreadChatClient implements Runnable {
 		}
 	}
 
+	private static String setHostName() {
+		String hostName ="";
+		boolean isInputFormatWrong = false;
+		Scanner in;
+		do {
+			in = new Scanner(System.in);
+			System.out.println("Enter hostname\n");
+			try {
+				hostName = in.nextLine();
+				isInputFormatWrong = false;
+			} catch (NoSuchElementException | IllegalStateException ex) {
+				isInputFormatWrong = true;
+				System.err.println("Invalid input type");
+			}
+		} while (isInputFormatWrong);
+		in.close();
+		return hostName;
+	}
+
+	private static int setPortNumber() {
+		int serverPort = 0;
+		boolean isInputFormatWrong = false;
+		Scanner in;
+		do {
+			in = new Scanner(System.in);
+			System.out.println("Enter server port number \n");
+			try {
+				serverPort = in.nextInt();
+				if(serverPort<0||(serverPort>=0&&serverPort<=1023)){
+					isInputFormatWrong = true;
+				}
+				isInputFormatWrong = false;
+			} catch (NoSuchElementException | IllegalStateException ex) {
+				isInputFormatWrong = true;
+				System.err.println("Invalid port number");
+			}
+		} while (isInputFormatWrong);
+		in.close();
+		return serverPort;
+	}
+
 	/*
 	 * Create a thread to read from the server. (non-Javadoc)
 	 * 
 	 * @see java.lang.Runnable#run()
 	 */
+	@SuppressWarnings("deprecation")
 	public void run() {
 		/*
 		 * Keep on reading from the socket till we receive "Bye" from the
@@ -92,6 +136,10 @@ public class MultiThreadChatClient implements Runnable {
 		 */
 		String responseLine;
 		try {
+//			while ((responseLine = is.readLine()).endsWith(" udp")) {
+//				
+//			}
+			
 			while ((responseLine = is.readLine()) != null) {
 				System.out.println(responseLine);
 				if (responseLine.indexOf("*** Exiting") != -1)

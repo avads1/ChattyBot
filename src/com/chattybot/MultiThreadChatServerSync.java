@@ -27,8 +27,8 @@ public class MultiThreadChatServerSync {
 	public static void main(String args[]) {
 
 		// Scanner in = new Scanner(System.in);
-
-		int maxClientsCount = getNumOfClientsSupported();
+		
+		int maxClientsCount = setNumOfClientsSupported();
 		List<String> chatRoomList = new ArrayList<String>();
 		List<String> usersList = new ArrayList<String>();
 		clientThread[] threads = new clientThread[maxClientsCount];
@@ -40,11 +40,6 @@ public class MultiThreadChatServerSync {
 			portNumber = Integer.valueOf(args[0]).intValue();
 		}
 
-		/*
-		 * Open a server socket on the portNumber (default 2222). Note that we
-		 * can not choose a port less than 1023 if we are not privileged users
-		 * (root).
-		 */
 		try {
 			serverSocket = new ServerSocket(portNumber);
 		} catch (IOException e) {
@@ -77,21 +72,45 @@ public class MultiThreadChatServerSync {
 		}
 	}
 
-	private static int getNumOfClientsSupported() {
+	private static int setNumOfClientsSupported() {
 		int maxClientsCount = 0;
 		boolean isInputFormatWrong = false;
+		Scanner sc;
 		do {
-			Scanner in = new Scanner(System.in);
+			sc = new Scanner(System.in);
 			System.out.println("Enter the number of clients supported \n");
 			try {
-				maxClientsCount = in.nextInt();
+				maxClientsCount = sc.nextInt();
 				isInputFormatWrong = false;
 			} catch (NoSuchElementException | IllegalStateException ex) {
 				isInputFormatWrong = true;
 				System.err.println("Invalid input type");
 			}
 		} while (isInputFormatWrong);
+		sc.close();
 		return maxClientsCount;
+	}
+	
+	private static int setPortNumber() {
+		int serverPort = 0;
+		boolean isInputFormatWrong = false;
+		Scanner sc;
+		do {
+			sc = new Scanner(System.in);
+			System.out.println("Enter server port number \n");
+			try {
+				serverPort = sc.nextInt();
+//				if(serverPort<0||(serverPort>=0&&serverPort<=1023)){
+//					isInputFormatWrong = true;
+//				}
+				isInputFormatWrong = false;
+			} catch (NoSuchElementException | IllegalStateException ex) {
+				isInputFormatWrong = true;
+				System.err.println("Invalid port number");
+			}
+		} while (isInputFormatWrong);
+		sc.close();
+		return serverPort;
 	}
 }
 
@@ -125,6 +144,7 @@ class clientThread extends Thread {
 		appUserList = usersList;
 	}
 
+	@SuppressWarnings("deprecation")
 	public void run() {
 		int maxClientsCount = this.maxClientsCount;
 		clientThread[] threads = this.threads;
