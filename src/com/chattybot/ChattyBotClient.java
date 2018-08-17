@@ -2,11 +2,17 @@ package com.chattybot;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -17,7 +23,7 @@ import java.util.Scanner;
  * the other to read the data from the server and to print it on the standard output.
  * 
  */
-public class MultiThreadChatClient implements Runnable {
+public class ChattyBotClient implements Runnable {
 
 	// The client socket
 	private static Socket clientSocket = null;
@@ -32,11 +38,13 @@ public class MultiThreadChatClient implements Runnable {
 	public static void main(String[] args) {
 		// The default port.
 		int portNumber = 2222;
+		int MAX_SIZE = 1048;
+		int count = 0;
 		// The default host.
 		String host = "localhost";
 
 		if (args.length < 2) {
-			System.out.println("New ChattyBot client" + host + ", portNumber=" + portNumber);
+			System.out.println("New ChattyBot client " + host + ", portNumber=" + portNumber);
 		} else {
 			host = args[0];
 			portNumber = Integer.valueOf(args[1]).intValue();
@@ -65,7 +73,7 @@ public class MultiThreadChatClient implements Runnable {
 			try {
 
 				/* Create a thread to read from the server. */
-				new Thread(new MultiThreadChatClient()).start();
+				new Thread(new ChattyBotClient()).start();
 				while (!closed) {
 					os.println(inputLine.readLine().trim());
 				}
@@ -83,7 +91,7 @@ public class MultiThreadChatClient implements Runnable {
 	}
 
 	private static String setHostName() {
-		String hostName ="";
+		String hostName = "";
 		boolean isInputFormatWrong = false;
 		Scanner in;
 		do {
@@ -110,7 +118,7 @@ public class MultiThreadChatClient implements Runnable {
 			System.out.println("Enter server port number \n");
 			try {
 				serverPort = in.nextInt();
-				if(serverPort<0||(serverPort>=0&&serverPort<=1023)){
+				if (serverPort < 0 || (serverPort >= 0 && serverPort <= 1023)) {
 					isInputFormatWrong = true;
 				}
 				isInputFormatWrong = false;
@@ -136,10 +144,6 @@ public class MultiThreadChatClient implements Runnable {
 		 */
 		String responseLine;
 		try {
-//			while ((responseLine = is.readLine()).endsWith(" udp")) {
-//				
-//			}
-			
 			while ((responseLine = is.readLine()) != null) {
 				System.out.println(responseLine);
 				if (responseLine.indexOf("*** Exiting") != -1)

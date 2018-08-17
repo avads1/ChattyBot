@@ -1,8 +1,12 @@
 package com.chattybot;
 
 import java.io.DataInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,7 +16,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-public class MultiThreadChatServerSync {
+public class ChattyBotServer {
 
 	// The server socket.
 	private static ServerSocket serverSocket = null;
@@ -27,7 +31,7 @@ public class MultiThreadChatServerSync {
 	public static void main(String args[]) {
 
 		// Scanner in = new Scanner(System.in);
-		
+
 		int maxClientsCount = setNumOfClientsSupported();
 		List<String> chatRoomList = new ArrayList<String>();
 		List<String> usersList = new ArrayList<String>();
@@ -90,7 +94,7 @@ public class MultiThreadChatServerSync {
 		sc.close();
 		return maxClientsCount;
 	}
-	
+
 	private static int setPortNumber() {
 		int serverPort = 0;
 		boolean isInputFormatWrong = false;
@@ -100,9 +104,9 @@ public class MultiThreadChatServerSync {
 			System.out.println("Enter server port number \n");
 			try {
 				serverPort = sc.nextInt();
-//				if(serverPort<0||(serverPort>=0&&serverPort<=1023)){
-//					isInputFormatWrong = true;
-//				}
+				// if(serverPort<0||(serverPort>=0&&serverPort<=1023)){
+				// isInputFormatWrong = true;
+				// }
 				isInputFormatWrong = false;
 			} catch (NoSuchElementException | IllegalStateException ex) {
 				isInputFormatWrong = true;
@@ -172,7 +176,7 @@ class clientThread extends Thread {
 				String command = is.readLine().trim();
 				if (command.startsWith(ChattyBotConstants.LIST_CHATROOMS_COMMAND)) {
 					if (appChatRoomList.size() < 1) {
-						os.println("There are no chatrooms created.   " + System.identityHashCode(appChatRoomList));
+						os.println("There are no chatrooms created.");
 					} else {
 						for (int i = 0; i < appChatRoomList.size(); i++) {
 							os.println(i + 1 + ") " + appChatRoomList.get(i));
@@ -246,7 +250,7 @@ class clientThread extends Thread {
 								if (appUserList.contains(userName)) {
 									usersList.add(userName);
 									this.chatRoom.put(chatRoomName, usersList);
-								}else{
+								} else {
 									os.println("User does not exist in ChattyBot");
 								}
 							} else if (userInput.equalsIgnoreCase(ChattyBotConstants.LEAVE_COMMAND)) {
