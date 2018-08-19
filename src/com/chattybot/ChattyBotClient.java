@@ -49,6 +49,7 @@ public class ChattyBotClient implements Runnable {
 		} else {
 			host = args[0];
 			portNumber = Integer.valueOf(args[1]).intValue();
+			System.out.println("ChattyBot server is up on args" + portNumber);
 		}
 
 		// Open a socket on a given host and port. Open input and output
@@ -57,10 +58,19 @@ public class ChattyBotClient implements Runnable {
 		try {
 			clientSocket = new Socket(host, portNumber);
 			inputLine = new BufferedReader(new InputStreamReader(System.in));
+			/*
+			 * On the client side, an output stream must be created to send the
+			 * data to the server socket using the classPrintStream or
+			 * DataOutputStream
+			 */
 			os = new PrintStream(clientSocket.getOutputStream());
+			/*
+			 * Using the DataInputStream class to create an input stream to
+			 * receive responses from the server
+			 */
 			is = new DataInputStream(clientSocket.getInputStream());
 		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host " + host);
+			System.err.println("** Host " + host + " is either unavailable or doesnt exist **");
 		} catch (IOException e) {
 			System.err.println("Couldn't get I/O for the connection to the host " + host);
 		}

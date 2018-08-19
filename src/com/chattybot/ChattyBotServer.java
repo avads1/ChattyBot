@@ -1,12 +1,8 @@
 package com.chattybot;
 
 import java.io.DataInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -16,6 +12,13 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
+/*This connection is established as follows:
+1) When the server receives a connection request on its specific server port, it creates a new socket for it and binds a port number to it.
+2)It sends the new port number to the client to inform it that the connection is established.
+3)The server goes on now by listening on two ports:
+	a)it waits for new incoming connection requests on its specific port, and
+	b)it reads and writes messages on established connection (on new port) with the accepted client*/
+
 public class ChattyBotServer {
 
 	// The server socket.
@@ -23,25 +26,24 @@ public class ChattyBotServer {
 	// The client socket.
 	private static Socket clientSocket = null;
 
-	// This chat server can accept up to maxClientsCount clients' connections.
-	// private static final int maxClientsCount = 10;
-	// private static final clientThread[] threads = new
-	// clientThread[maxClientsCount];
+	/*
+	 * This chat server can accept up to maxClientsCount clients' connections.
+	 * private static final int maxClientsCount = 10; private static final
+	 * clientThread[] threads = new clientThread[maxClientsCount];
+	 */
 
 	public static void main(String args[]) {
-
-		// Scanner in = new Scanner(System.in);
-
 		int maxClientsCount = setNumOfClientsSupported();
 		List<String> chatRoomList = new ArrayList<String>();
 		List<String> usersList = new ArrayList<String>();
-		clientThread[] threads = new clientThread[maxClientsCount];
+		ClientThread[] threads = new ClientThread[maxClientsCount];
 		// The default port number.
 		int portNumber = 2222;
 		if (args.length < 1) {
 			System.out.println("ChattyBot server is up on " + portNumber);
 		} else {
 			portNumber = Integer.valueOf(args[0]).intValue();
+			System.out.println("ChattyBot server is up on " + portNumber);
 		}
 
 		try {
@@ -50,17 +52,48 @@ public class ChattyBotServer {
 			System.out.println(e);
 		}
 
-		/*
-		 * Create a client socket for each connection and pass it to a new
-		 * client thread.
-		 */
+		// After server socket is created, run a infinite while loop
 		while (true) {
 			try {
+				/*
+				 * Create a client socket for each connection and pass it to a
+				 * new client thread. The server communicates with the client by
+				 * reading from and writing to the new port. If other connection
+				 * requests arrive, the server accepts them in the similar way
+				 * creating a new port for each new connection. The
+				 * communication with each client is done via the sockets
+				 * created for each communication.
+				 */
+
+				/*
+				 * When programming TCP and UDP based applications in Java,
+				 * different types of sockets are used. These sockets are
+				 * implemented in different classes. The classes ServerSocket
+				 * and Socket implement TCP based sockets and the class
+				 * DatagramSocket implements UDP based sockets as follows:
+				 * 1)Stream socket to listen for client requests (TCP): the
+				 * class ServerSocket. 2)Stream socket (TCP): the class Socket.
+				 * 3)Datagram socket (UDP): the class DatagramSocket.
+				 */
 				clientSocket = serverSocket.accept();
+
+				/*
+				 * Now the server can send/receive data to/from the clients.
+				 * Since the sockets are like the file descriptors the
+				 * send/receive operations are implemented like read/write file
+				 * operations on the input/output streams.
+				 */
+				/*
+				 * it is not necessary to synchronize the portion 2 of code (see
+				 * the table of the partitioned code). Even if this code
+				 * modifies threads[] array, a better inspection of the code
+				 * discovers that there is no risk this modification will create
+				 * null pointer exceptions or other problems to the program.
+				 */
 				int i = 0;
 				for (i = 0; i < maxClientsCount; i++) {
 					if (threads[i] == null) {
-						(threads[i] = new clientThread(clientSocket, threads, chatRoomList, usersList)).start();
+						(threads[i] = new ClientThread(clientSocket, threads, chatRoomList, usersList)).start();
 						break;
 					}
 				}
@@ -128,19 +161,27 @@ public class ChattyBotServer {
  * routes the private message to the particular client. When a client leaves the
  * chat room this thread informs also all the clients about that and terminates.
  */
-class clientThread extends Thread {
+
+/*
+ * When a thread enters synchronized(this){}statement it blocks all other
+ * threads from entering their synchronized(this){} statements. Thus, putting
+ * all critical sections in synchronized(this){} statements we are guarantied
+ * that the chat server will execute correctly without rising null pointer
+ * exceptions caused by concurrent execution of other critical sections.
+ */
+class ClientThread extends Thread {
 
 	private String clientName = null;
 	private DataInputStream is = null;
 	private PrintStream os = null;
 	private Socket clientSocket = null;
-	private final clientThread[] threads;
+	private final ClientThread[] threads;
 	private int maxClientsCount;
 	private List<String> appChatRoomList;
 	private List<String> appUserList;
 	private Map<String, List<String>> chatRoom;
 
-	public clientThread(Socket clientSocket, clientThread[] threads, List<String> chatRoomList,
+	public ClientThread(Socket clientSocket, ClientThread[] threads, List<String> chatRoomList,
 			List<String> usersList) {
 		this.clientSocket = clientSocket;
 		this.threads = threads;
@@ -152,23 +193,25 @@ class clientThread extends Thread {
 	@SuppressWarnings("deprecation")
 	public void run() {
 		int maxClientsCount = this.maxClientsCount;
-		clientThread[] threads = this.threads;
+		ClientThread[] threads = this.threads;
 
 		try {
-			// Create input and output streams for this client.
+			// Create input and output streams for this client. DataInputStream
+			// is used to receive inputs from the client.
 			is = new DataInputStream(clientSocket.getInputStream());
+			// Using the class PrintStream to send data to the client
 			os = new PrintStream(clientSocket.getOutputStream());
+			/*
+			 * Usually, on the server side you need to close only the client
+			 * socket after the client gets served. The server socket is kept
+			 * open as long as the server is running. A new client can connect
+			 * to the server on the server socket to establish a new connection,
+			 * that is, a new client socket.
+			 */
 			String userName;
-			while (true) {
-				os.println("Enter your name.");
-				userName = is.readLine().trim();
-				if (userName.indexOf('@') == -1) {
-					appUserList.add(userName);
-					break;
-				} else {
-					os.println("** The name should not contain '@' character **.");
-				}
-			}
+			os.println("Enter your name.");
+			userName = is.readLine().trim();
+			appUserList.add(userName);
 
 			while (true) {
 				os.println(">>");
@@ -214,7 +257,7 @@ class clientThread extends Thread {
 		}
 	}
 
-	private void joinChatRoom(int maxClientsCount, clientThread[] threads, String name, String command)
+	private void joinChatRoom(int maxClientsCount, ClientThread[] threads, String name, String command)
 			throws IOException {
 		int startIndex = command.length() - ChattyBotConstants.JOIN_CHATROOM_COMMAND.length();
 		String chatRoomName = command.substring(command.length() - startIndex).trim();
@@ -229,15 +272,8 @@ class clientThread extends Thread {
 
 			// Welcome the new the client to chatroom.
 			os.println("##################################\nWelcome \"" + name + "\" to \"" + chatRoomName
-					+ "\"###############################" + "\nTo exit chat room enter \"leave\"");
+					+ "\"###############################" + "\nTo exit chat room, type \"leave\"");
 			synchronized (this) {
-				for (int i = 0; i < maxClientsCount; i++) {
-					if (threads[i] != null && threads[i] == this) {
-						clientName = "@" + name;
-						break;
-					}
-
-				}
 				// Public chat box
 				for (int i = 0; i < maxClientsCount; i++) {
 					if (threads[i] != null && threads[i] != this && threads[i].chatRoom != null) {
@@ -269,7 +305,7 @@ class clientThread extends Thread {
 							// except the current client that has
 							// sent a cmd/request
 							if (threads[i] != null && threads[i] != this) {
-								threads[i].os.println("=== The user " + name + " is leaving the chat room !!! ===\n");
+								threads[i].os.println("=== The user " + name + " is leaving the chat room ===\n");
 							}
 						}
 					}
@@ -280,13 +316,7 @@ class clientThread extends Thread {
 				} else if (userInput.equalsIgnoreCase(ChattyBotConstants.HELP)) {
 					os.println(ChattyBotConstants.LIST_OF_CHATROOM_COMMANDS);
 				} else {
-
-					// If the message is private sent it to the given client.
-					if (userInput.startsWith("@")) {
-						privateMessage(maxClientsCount, threads, name, userInput);
-					} else {
-						broadcastMessage(maxClientsCount, threads, name, userInput);
-					}
+					broadcastMessage(maxClientsCount, threads, name, userInput);
 				}
 			}
 		} else {
@@ -294,35 +324,12 @@ class clientThread extends Thread {
 		}
 	}
 
-	private void privateMessage(int maxClientsCount, clientThread[] threads, String name, String userInput) {
-		String[] words = userInput.split("\\s", 2);
-		if (words.length > 1 && words[1] != null) {
-			words[1] = words[1].trim();
-			if (!words[1].isEmpty()) {
-				synchronized (this) {
-					for (int i = 0; i < maxClientsCount; i++) {
-						if (threads[i] != null && threads[i] != this && threads[i].clientName != null
-								&& threads[i].clientName.equals(words[0])) {
-							threads[i].os.println("<" + name + "> " + words[1]);
-							/*
-							 * Echo this message to let the client know the
-							 * private message was sent.
-							 */
-							this.os.println(">" + name + "> " + words[1]);
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private void broadcastMessage(int maxClientsCount, clientThread[] threads, String name, String userInput) {
+	private void broadcastMessage(int maxClientsCount, ClientThread[] threads, String name, String userInput) {
 		// The message is public, broadcast it to all other clients.
 		synchronized (this) {
 			for (int i = 0; i < maxClientsCount; i++) {
 				if (threads[i] != null && threads[i].clientName != null) {
-					threads[i].os.println("<" + name + "> " + userInput);
+					threads[i].os.println("{" + name + "} " + userInput);
 				}
 			}
 		}
@@ -340,7 +347,7 @@ class clientThread extends Thread {
 		}
 	}
 
-	private void listUsers(int maxClientsCount, clientThread[] threads, String chatRoomName) {
+	private void listUsers(int maxClientsCount, ClientThread[] threads, String chatRoomName) {
 		for (int i = 0; i < maxClientsCount; i++) {
 			if (threads[i] != null && threads[i].chatRoom != null && threads[i].chatRoom.containsKey(chatRoomName)) {
 				List<String> chatRoomUserList = threads[i].chatRoom.get(chatRoomName);
