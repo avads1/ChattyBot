@@ -33,10 +33,6 @@ public class ChattyBotServer {
 	 */
 
 	public static void main(String args[]) {
-		int maxClientsCount = setNumOfClientsSupported();
-		List<String> chatRoomList = new ArrayList<String>();
-		List<String> usersList = new ArrayList<String>();
-		ClientThread[] threads = new ClientThread[maxClientsCount];
 		// The default port number.
 		int portNumber = 2222;
 		if (args.length < 1) {
@@ -45,7 +41,10 @@ public class ChattyBotServer {
 			portNumber = Integer.valueOf(args[0]).intValue();
 			System.out.println("ChattyBot server is up on " + portNumber);
 		}
-
+		int maxClientsCount = setNumOfClientsSupported();
+		List<String> chatRoomList = new ArrayList<String>();
+		List<String> usersList = new ArrayList<String>();
+		ClientThread[] threads = new ClientThread[maxClientsCount];
 		try {
 			serverSocket = new ServerSocket(portNumber);
 		} catch (IOException e) {

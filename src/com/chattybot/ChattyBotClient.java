@@ -38,8 +38,6 @@ public class ChattyBotClient implements Runnable {
 	public static void main(String[] args) {
 		// The default port.
 		int portNumber = 2222;
-		int MAX_SIZE = 1048;
-		int count = 0;
 		// The default host.
 		String host = "localhost";
 
@@ -49,7 +47,8 @@ public class ChattyBotClient implements Runnable {
 		} else {
 			host = args[0];
 			portNumber = Integer.valueOf(args[1]).intValue();
-			System.out.println("ChattyBot server is up on args" + portNumber);
+			System.out.println("--------------------- Welcome to ChattyBot! ------------------\nServer name: " + host
+					+ ", portNumber: " + portNumber);
 		}
 
 		// Open a socket on a given host and port. Open input and output
