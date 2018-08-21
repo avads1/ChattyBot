@@ -40,7 +40,6 @@ public class ChattyBotClient implements Runnable {
 			System.out.println("--------------------- Welcome to ChattyBot! ------------------\nServer name: " + host
 					+ ", portNumber: " + portNumber);
 		}
-
 		try {
 			clientSocket = new Socket(host, portNumber);
 			inputLine = new BufferedReader(new InputStreamReader(System.in));
