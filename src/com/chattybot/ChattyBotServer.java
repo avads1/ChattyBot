@@ -243,8 +243,11 @@ class ClientThread extends Thread {
 					synchronized (this) {
 						// Public chat box
 						for (int i = 0; i < maxClientsCount; i++) {
-							if (threads[i] != null && threads[i] != this && threads[i].chatRoom.keySet().contains(chatRoomName)) {
-								threads[i].os.println("=== The user " + userName + " is leaving the chat room ===\n");
+							if (threads[i] != null && threads[i] != this && threads[i].chatRoom != null) {
+								if (threads[i].chatRoom.keySet().contains(chatRoomName)) {
+									threads[i].os
+											.println("=== The user " + userName + " is leaving the chat room ===\n");
+								}
 							}
 						}
 					}
@@ -264,12 +267,15 @@ class ClientThread extends Thread {
 		}
 	}
 
-	private void broadcastMessage(int maxClientsCount, ClientThread[] threads, String name, String userInput, String chatRoomName) {
+	private void broadcastMessage(int maxClientsCount, ClientThread[] threads, String name, String userInput,
+			String chatRoomName) {
 		// The message is public, broadcast it to all other clients.
 		synchronized (this) {
 			for (int i = 0; i < maxClientsCount; i++) {
-				if (threads[i] != null && threads[i].clientName != null && threads[i].chatRoom.keySet().contains(chatRoomName)) {
-					threads[i].os.println("{" + name + "} " + userInput);
+				if (threads[i] != null && threads[i].clientName != null && threads[i].chatRoom != null) {
+					if (threads[i].chatRoom.keySet().contains(chatRoomName)) {
+						threads[i].os.println("{" + name + "} " + userInput);
+					}
 				}
 			}
 		}
@@ -289,10 +295,12 @@ class ClientThread extends Thread {
 
 	private void listUsers(int maxClientsCount, ClientThread[] threads, String chatRoomName) {
 		for (int i = 0; i < maxClientsCount; i++) {
-			if (threads[i] != null && threads[i].chatRoom != null && threads[i].chatRoom.containsKey(chatRoomName)) {
-				List<String> chatRoomUserList = threads[i].chatRoom.get(chatRoomName);
-				for (int j = 0; j < chatRoomUserList.size(); j++)
-					os.println(chatRoomUserList.get(j));
+			if (threads[i] != null && threads[i].chatRoom != null && threads[i].chatRoom != null) {
+				if (threads[i].chatRoom.keySet().contains(chatRoomName)) {
+					List<String> chatRoomUserList = threads[i].chatRoom.get(chatRoomName);
+					for (int j = 0; j < chatRoomUserList.size(); j++)
+						os.println(chatRoomUserList.get(j));
+				}
 			}
 		}
 	}
