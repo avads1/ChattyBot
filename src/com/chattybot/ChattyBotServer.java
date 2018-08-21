@@ -254,7 +254,7 @@ class ClientThread extends Thread {
 					// Own client console
 					os.println("####################################### Bye " + userName
 							+ " ############################");
-					this.chatRoom.remove(chatRoomName);
+					this.chatRoom = null;
 					break;
 				} else if (userInput.equalsIgnoreCase(ChattyBotConstants.HELP)) {
 					os.println(ChattyBotConstants.LIST_OF_CHATROOM_COMMANDS);
